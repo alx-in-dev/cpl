@@ -1,0 +1,12 @@
+{
+  "name": "cpl",
+  "description": "Claude Pipeline — universal AI-assisted development pipeline for any project type",
+  "version": "1.0.0",
+  "author": {
+    "name": "Alexey",
+    "email": "it.leha@gmail.com"
+  },
+  "repository": "https://github.com/alexey/cpl",
+  "license": "MIT",
+  "keywords": ["pipeline", "workflow", "code-generation", "architecture", "review", "debugging"]
+}

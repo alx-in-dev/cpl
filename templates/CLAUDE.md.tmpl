@@ -1,0 +1,120 @@
+# __PROJECT_NAME__ — Claude Code Guidelines
+
+## Проект
+`__PROJECT_NAME__`
+
+## Профиль проекта
+- **Тип**: __TYPE__
+- **Стек**: __STACK__
+
+<!-- Секция дополняется командой /cpl:new-project после определения стека -->
+
+## Сборка
+Сборка и запуск выполняются вручную через IDE/локальные процессы.
+Claude не должен запускать сборку/рантайм команды без явного запроса.
+
+## Конвейер cpl (Claude Pipeline)
+
+**Принцип: не смешивать фазы в одном чате. Контекст между фазами фиксируется в `ai/*.md`.**
+
+### Автороутинг
+
+Если пользователь пишет запрос без явной команды — используй `/cpl:do` для определения подходящей фазы. Если запрос простой (вопрос про код, быстрый фикс) — ответь напрямую.
+
+| Признаки запроса | Фаза |
+|---|---|
+| "посмотри", "разберись", путь к файлу | `/cpl:gather` |
+| "хочу фичу", "нужно чтобы", бизнес-логика | `/cpl:product` |
+| "как построить", "структура", "паттерн" | `/cpl:architect` |
+| "напиши", "реализуй", "сделай" + код | `/cpl:gen` или `/cpl:gen-server` |
+| "проверь", "ревью" | `/cpl:code-review` |
+| "ошибка", stacktrace, exception | `/cpl:debug` |
+| "посмотри что не так", "проверь /api/..." | `/cpl:investigate` |
+| "что сделано", "прогресс" | `/cpl:progress` |
+| описание фичи без конкретной фазы | `/cpl:kickoff` |
+| "что дальше" | `/cpl:next` |
+| "улучши конвейер" | `/cpl:evolve` |
+
+### Конвейер фаз
+
+#### Основной (фича → код)
+
+| # | Команда | Модель | Читает | Пишет |
+|---|---------|--------|--------|-------|
+| 0 | `/cpl:gather` | haiku | сырые файлы/логи | `ai/context.md` |
+| 1 | `/cpl:product` | opus | `context.md` | `requirements.md`, `tasks.md` |
+| 2 | `/cpl:architect` | opus | `requirements.md`, `context.md` | `architecture.md`, `api_contracts.md` |
+| 3a | `/cpl:design` | opus | `requirements.md`, `context.md` | `design.md` |
+| 3b | `/cpl:ui-spec` | sonnet | `requirements.md`, `architecture.md`, `design.md` | `ui_spec.md` |
+| 4 | `/cpl:test-plan` | sonnet | `requirements.md`, `architecture.md` | `test_plan.md` |
+| 5 | `/cpl:gen` | haiku | `tasks.md`, `architecture.md`, `ui_spec.md` | код + `impl_notes.md` |
+| 5s | `/cpl:gen-server` | haiku | `tasks.md`, `architecture.md`, `api_contracts.md` | код + `impl_notes.md` |
+| 6 | `/cpl:gen-tests` | haiku | `tasks.md`, `test_plan.md` | тесты |
+| 7 | `/cpl:code-review` | sonnet | diff + `architecture.md` | `review.md` |
+| 8 | `/cpl:debug` | sonnet | логи/stacktrace + `debug.md` | `debug.md` + код-фикс |
+| 8b | `/cpl:investigate` | sonnet | код, конфиги, контракты | `investigate.md` |
+
+#### Post-MVP (качество, рефакторинг, релиз)
+
+| # | Команда | Модель | Читает | Пишет |
+|---|---------|--------|--------|-------|
+| 9 | `/cpl:refactor` | opus | `architecture.md`, код | `refactor.md` |
+| 10 | `/cpl:migrate` | sonnet | entities, `api_contracts.md` | `migration.md` |
+| 11 | `/cpl:security` | opus | код, конфиги | `security.md` |
+| 12 | `/cpl:api-diff` | haiku | client DTO + server DTO | `api_diff.md` |
+| 13 | `/cpl:changelog` | haiku | git log, `impl_notes.md` | `changelog.md` |
+| 14 | `/cpl:release` | sonnet | `changelog.md`, `review.md`, `security.md` | `release.md` |
+
+#### Мета и служебные
+
+| Команда | Модель | Назначение |
+|---------|--------|------------|
+| `/cpl:do` | haiku | Роутер — определяет нужную фазу по запросу |
+| `/cpl:next` | haiku | Автоопределение следующего шага |
+| `/cpl:kickoff` | opus | Быстрый старт: context → requirements → tasks |
+| `/cpl:new-project` | opus | Инициализация: профиль, стек, артефакты, паттерны |
+| `/cpl:verify` | haiku | Проверка артефактов + билд + lint |
+| `/cpl:progress` | haiku | Сводка состояния конвейера |
+| `/cpl:pause` | haiku | Сохранение позиции для продолжения |
+| `/cpl:resume` | haiku | Восстановление контекста из предыдущей сессии |
+| `/cpl:delegate` | haiku | Делегирование простых фаз на локальную LLM |
+| `/cpl:evolve` | opus | Самоулучшение: learnings → правки конвейера |
+
+### Verification Gates
+
+Генерирующие команды (`/cpl:gen`, `/cpl:gen-server`, `/cpl:gen-tests`) после каждого таска запускают `verify_cmd` из `ai/status.md`. Коммит только при успешной верификации.
+
+### Deviation Rules
+
+Агенты генерации следуют правилам автономности:
+- **auto-fix**: broken imports, missing deps, type mismatches → чинят молча, логируют в `ai/impl_notes.md`
+- **auto-add**: validation, error handling, null-checks → добавляют и логируют
+- **ask**: новые таблицы БД, сервисы, архитектурные изменения → спрашивают
+
+### TDD Mode
+
+Опционально. Включается через `tdd: true` в `ai/status.md`. Когда включён, генерация кода идёт по циклу RED → GREEN → REFACTOR.
+
+### Правила конвейера
+1. НЕ генерить код без плана (`tasks.md`)
+2. НЕ дебажить во время генерации
+3. Каждый агент пишет ТОЛЬКО в свой артефакт
+4. CodeGen: 1 таск → 1 коммит (1–3 максимум)
+5. Предпочитать короткие итерации и маленькие диффы
+6. Перед `/cpl:pause` обновить `ai/status.md`, `ai/impl_notes.md`, `ai/tasks.md`
+7. При перезаписи артефакта — архивировать предыдущую версию в `ai/history/`
+8. `/cpl:code-review` и `/cpl:investigate` могут пометить RE-PASS блокер — разрешить перед продолжением
+9. Подробный регламент: `ai/working_regulation.md`
+10. Каждая фаза пишет наблюдения в `ai/learnings.md` → `/cpl:evolve` превращает их в улучшения
+11. Перед генерацией — читать `ai/gotchas.md` (известные ошибки)
+
+## Git Flow
+
+<!-- Заполняется командой /cpl:new-project на основе профиля проекта -->
+<!-- Пример:
+- **Основная ветка**: `main`
+- **Feature ветки**: `feature/<name>` от `main`
+- **Naming**: kebab-case для веток
+-->
+
+<!-- Секции ниже заполняются командой /cpl:new-project на основе профиля проекта -->
