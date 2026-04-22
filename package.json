@@ -1,6 +1,6 @@
 {
   "name": "claude-pipeline",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Claude Pipeline — universal AI-assisted development pipeline for any project type",
   "author": "Alexey <it.leha@gmail.com>",
   "license": "MIT",
