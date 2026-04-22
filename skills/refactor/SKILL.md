@@ -7,6 +7,18 @@ description: "Use when you need a refactoring plan: impact analysis, safe steps,
 
 **Recommended model: opus**
 
+## Выполнение через Agent
+
+Не выполняй задание напрямую — делегируй субагенту:
+- `prompt`: содержимое секций ниже + аргументы (`$ARGUMENTS`)
+- `subagent_type`: `"general-purpose"`
+- `description`: краткое описание задачи (2–5 слов)
+
+Верни пользователю только резюме: что сделано, какие файлы записаны (2–3 предложения).
+
+---
+
+
 ## Guardrails
 - **Режим планирования**: НЕ пиши код — только план рефакторинга
 - Записывай план в `ai/refactor.md`

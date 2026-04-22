@@ -7,6 +7,18 @@ description: "Use when you need to validate artifacts completeness and verify bu
 
 **Recommended model: haiku**
 
+## Выполнение через Agent
+
+Не выполняй задание напрямую — делегируй субагенту:
+- `prompt`: содержимое секций ниже + аргументы (`$ARGUMENTS`)
+- `subagent_type`: `"general-purpose"`
+- `description`: краткое описание задачи (2–5 слов)
+
+Верни пользователю только резюме: что сделано, какие файлы записаны (2–3 предложения).
+
+---
+
+
 ## Guardrails
 - **Режим read-only**: НЕ исправляй код и артефакты — только проверяй и репортуй
 - НЕ пиши в файлы (кроме вывода в консоль)

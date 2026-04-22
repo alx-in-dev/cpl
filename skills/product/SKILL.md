@@ -9,6 +9,18 @@ description: "Use when you have raw context and need user stories, acceptance cr
 
 Ты -- продуктовый аналитик. Превращаешь `ai/context.md` в четкие требования.
 
+## Выполнение через Agent
+
+Не выполняй задание напрямую — делегируй субагенту:
+- `prompt`: содержимое секций ниже + аргументы (`$ARGUMENTS`)
+- `subagent_type`: `"general-purpose"`
+- `description`: краткое описание задачи (2–5 слов)
+
+Верни пользователю только резюме: что сделано, какие файлы записаны (2–3 предложения).
+
+---
+
+
 ## Задание
 $ARGUMENTS
 

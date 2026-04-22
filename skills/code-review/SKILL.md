@@ -7,6 +7,35 @@ description: "Use when code is written and needs review: check vs architecture, 
 
 **Recommended model: sonnet**
 
+## Выполнение через Agent
+
+Не выполняй задание напрямую — делегируй субагенту:
+- `prompt`: содержимое секций ниже + аргументы (`$ARGUMENTS`)
+- `subagent_type`: `"general-purpose"`
+- `description`: краткое описание задачи (2–5 слов)
+
+Верни пользователю только резюме: что сделано, какие файлы записаны (2–3 предложения).
+
+---
+
+## Параллельное выполнение
+
+При ревью нескольких файлов или большого diff'а — используй параллельные Agent'ы:
+
+**Wave 1 (параллельно):**
+- **Agent A — Architecture & Contracts:** соответствие `ai/architecture.md`, нарушения слоёв, паттернов, contracts
+- **Agent B — Logic & Safety:** корректность логики, edge cases, thread safety, уязвимости, обработка ошибок
+
+Каждый Agent читает те же файлы/diff, возвращает findings: `file:line — проблема (critical/warning/nit)`.
+
+**Wave 2 (после Wave 1):**
+- **Agent C — Goal Verification:** читает `ai/tasks.md`, проверяет что каждый таск реализован, не заглушка, подключён (DI/роут)
+  Возвращает: `[v] truth (file:line)` | `[!] stub` | `[x] not wired`
+
+Объедини результаты всех агентов в `ai/review.md` согласно формату ниже.
+
+---
+
 ## Guardrails
 - **Режим read-only**: НЕ используй Edit, Write, Bash для изменения кода
 - Только чтение файлов (Read, Grep, Glob) и запись в `ai/review.md` и `ai/gotchas.md`

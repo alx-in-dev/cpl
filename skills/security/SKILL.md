@@ -9,6 +9,35 @@ description: "Use when you need a security audit: OWASP Top 10, vulnerabilities,
 
 Ты -- security-аудитор. Проверяешь код на уязвимости.
 
+## Выполнение через Agent
+
+Не выполняй задание напрямую — делегируй субагенту:
+- `prompt`: содержимое секций ниже + аргументы (`$ARGUMENTS`)
+- `subagent_type`: `"general-purpose"`
+- `description`: краткое описание задачи (2–5 слов)
+
+Верни пользователю только резюме: что сделано, какие файлы записаны (2–3 предложения).
+
+---
+
+## Параллельное выполнение
+
+Запусти три Agent'а одновременно — по группам OWASP:
+
+**Agent 1 — A01-A03:** Broken Access Control, Cryptographic Failures, Injection  
+→ читает: controllers/handlers, auth config, input validation
+
+**Agent 2 — A04-A06:** Insecure Design, Security Misconfiguration, Vulnerable Components  
+→ читает: конфиги, зависимости (package.json / build.gradle), `ai/architecture.md`
+
+**Agent 3 — A07-A10:** Auth Failures, Data Integrity, Logging & Monitoring, SSRF  
+→ читает: auth middleware, logging config, внешние API-вызовы
+
+Каждый Agent возвращает findings: `SEC-N | file:line | severity | описание`.  
+Объедини результаты трёх агентов в `ai/security.md` согласно формату ниже.
+
+---
+
 ## Задание
 $ARGUMENTS
 
