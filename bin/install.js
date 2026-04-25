@@ -14,6 +14,7 @@ const PKG_ROOT = path.resolve(__dirname, "..");
 const SKILLS_DIR = path.join(PKG_ROOT, "skills");
 const REFS_DIR = path.join(PKG_ROOT, "references");
 const TMPL_DIR = path.join(PKG_ROOT, "templates");
+const HOOKS_DIR = path.join(PKG_ROOT, "lib", "hooks");
 
 const VERSION = JSON.parse(fs.readFileSync(path.join(PKG_ROOT, "package.json"), "utf8")).version;
 
@@ -143,6 +144,61 @@ function rmRecursive(p) {
 }
 
 // ---------------------------------------------------------------------------
+// Hook helpers: merge/remove autopilot-stop hook in settings.json
+// ---------------------------------------------------------------------------
+
+function mergeStopHook(settingsPath, hooksTarget) {
+  const hookCmd = `node "${hooksTarget}"`;
+  const hookEntry = {
+    matcher: "*",
+    hooks: [{ type: "command", command: hookCmd, timeout: 5 }],
+  };
+
+  let settings = {};
+  if (fs.existsSync(settingsPath)) {
+    try {
+      settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+    } catch {
+      log("WARN", `Cannot parse ${settingsPath} — hook not registered`);
+      return;
+    }
+  }
+
+  if (!settings.hooks) settings.hooks = {};
+  if (!settings.hooks.Stop) settings.hooks.Stop = [];
+
+  // Remove stale cpl autopilot-stop entries, then re-add
+  settings.hooks.Stop = settings.hooks.Stop.filter(
+    (e) => !e.hooks || !e.hooks.some((h) => h.command && h.command.includes("autopilot-stop.js"))
+  );
+  settings.hooks.Stop.push(hookEntry);
+
+  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), "utf8");
+  log("HOOK", `Stop hook → ${settingsPath}`);
+}
+
+function removeStopHook(settingsPath) {
+  if (!fs.existsSync(settingsPath)) return;
+  let settings;
+  try {
+    settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+  } catch {
+    return;
+  }
+
+  if (!settings.hooks || !settings.hooks.Stop) return;
+
+  settings.hooks.Stop = settings.hooks.Stop.filter(
+    (e) => !e.hooks || !e.hooks.some((h) => h.command && h.command.includes("autopilot-stop.js"))
+  );
+  if (settings.hooks.Stop.length === 0) delete settings.hooks.Stop;
+  if (Object.keys(settings.hooks).length === 0) delete settings.hooks;
+
+  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), "utf8");
+  log("HOOK", `Stop hook removed from ${settingsPath}`);
+}
+
+// ---------------------------------------------------------------------------
 // Install: copy skills → commands/cpl/, refs → cpl/refs/, etc.
 // ---------------------------------------------------------------------------
 
@@ -151,6 +207,7 @@ function install() {
   const commandsDir = path.join(base, "commands", "cpl");
   const refsTarget = path.join(base, "cpl", "refs");
   const tmplTarget = path.join(base, "cpl", "tmpl");
+  const hooksTarget = path.join(base, "cpl", "hooks");
   const versionFile = path.join(base, "cpl", "VERSION");
 
   console.log(`\nInstalling claude-pipeline v${VERSION} → ${base}\n`);
@@ -188,6 +245,19 @@ function install() {
   }
   copyDir(TMPL_DIR, tmplTarget);
 
+  // Copy hooks
+  if (fs.existsSync(HOOKS_DIR)) {
+    if (fs.existsSync(hooksTarget)) {
+      rmRecursive(hooksTarget);
+    }
+    copyDir(HOOKS_DIR, hooksTarget);
+  }
+
+  // Register Stop hook in settings.json
+  const settingsPath = path.join(base, "settings.json");
+  const autopilotHookPath = path.join(hooksTarget, "autopilot-stop.js");
+  mergeStopHook(settingsPath, autopilotHookPath);
+
   // Write VERSION
   ensureDir(path.dirname(versionFile));
   fs.writeFileSync(versionFile, VERSION, "utf8");
@@ -209,6 +279,10 @@ function uninstall() {
   ];
 
   console.log(`\nUninstalling claude-pipeline from ${base}\n`);
+
+  // Remove Stop hook from settings.json before deleting files
+  const settingsPath = path.join(base, "settings.json");
+  removeStopHook(settingsPath);
 
   for (const t of targets) {
     if (fs.existsSync(t)) {
